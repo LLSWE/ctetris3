@@ -1,19 +1,20 @@
 import std::io;
+import libc;
 
 
-String EMPTY_STR = "";
-String BLOCK_STR = "\u2588";
+const String EMPTY_STR = "";
+const String BLOCK_STR = "\u2588";
 
-int TETRIS = 4;
-int NUM_TETROMINOS = 7;
-int NUM_ORIENTATIONS = 4;
+const int TETRIS = 4;
+const int NUM_TETROMINOS = 7;
+const int NUM_ORIENTATIONS = 4;
 
 
-int MAX_LEVEL = 19;
-int LINES_PER_LEVEL = 10;
+const int MAX_LEVEL = 19;
+const int LINES_PER_LEVEL = 10;
 
 fn int type_to_cell(int x){
-    return x + 1 
+    return x + 1;
 }
 
 enum Tetris_type : int {
@@ -24,12 +25,12 @@ enum Tetris_type : int {
     TET_S,
     TET_T,
     TET_Z
-};
+}
 
 struct Tetris_location {
     int row;
     int col;
-};
+}
 
 enum Tetris_cell : char{
     TC_EMPTY,
@@ -39,13 +40,13 @@ enum Tetris_cell : char{
     TC_CELLS,
     TC_CELLT,
     TC_CELLZ,
-};
+}
 
 struct Tetris_block{
     int typ;
     int ori;
     Tetris_location loc;
-};
+}
 
 enum Tetris_move : int {
     TM_LEFT,
@@ -55,7 +56,7 @@ enum Tetris_move : int {
     TM_DROP,
     TM_HOLD,
     TM_NONE
-};
+}
 
 struct Tetris_game {
     int rows;
@@ -67,14 +68,14 @@ struct Tetris_game {
 
     Tetris_block falling;
     Tetris_block next;
-    Tetris_bloc stored;
+    Tetris_block stored;
 
     int ticks_till_gravity;
     
     int lines_remaining;
-};
+}
 
-Tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
+const Tetris_location[][][] TETROMINOS = {
       // I
   {{{1, 0}, {1, 1}, {1, 2}, {1, 3}},
    {{0, 2}, {1, 2}, {2, 2}, {3, 2}},
@@ -112,7 +113,7 @@ Tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
    {{0, 1}, {1, 0}, {1, 1}, {2, 0}}},
 };
 
-int GRAVITY_LEVEL[MAX_LEVEL+1] = {
+const int[] GRAVITY_LEVEL = {
   50, 48, 46, 44, 42, 40, 38, 36, 34, 32,
   30, 28, 26, 24, 22, 20, 16, 12,  8,  4
 };
@@ -140,7 +141,7 @@ fn bool check(Tetris_game *obj, int row, int col) {
 
 fn void put(Tetris_game *obj, Tetris_block block) {
     for (int i = 0; i < TETRIS; i++){
-        Tetris_location cell = TETRONOMINOS[block.typ][block.ori][i];
+        Tetris_location cell = TETROMINOS[block.typ][block.ori][i];
         set(obj, block.loc.row + cell.row, block.loc.col + cell.col, (char)type_to_cell(block.typ));
     }
 }
@@ -153,8 +154,8 @@ fn void remove(Tetris_game *obj, Tetris_block block){
 }
 
 fn bool fits(Tetris_game *obj, Tetris_block block){
-    for (i = 0; i < TETRIS; i++) {
-    Tetris_location cell = TETRONOMINOS[block.typ][block.ori][i];
+    for (int i = 0; i < TETRIS; i++) {
+    Tetris_location cell = TETROMINOS[block.typ][block.ori][i];
     int r = block.loc.row + cell.row;
     int c = block.loc.col + cell.col;
     if (!check(obj,r,c) || is_filled(get(obj,r,c))) {
@@ -168,7 +169,7 @@ fn int random_tetromino(){
     return libc::rand() % NUM_TETROMINOS;
 }
 
-fn void tg_new_falling(Tetris_game *obj) {
+fn void new_falling(Tetris_game *obj) {
     obj.falling = obj.next;
     obj.next.typ = random_tetromino();
     obj.next.ori = 0;
@@ -176,134 +177,150 @@ fn void tg_new_falling(Tetris_game *obj) {
     obj.next.loc.col = obj.cols / 2 - 2;
 }
 
-fn void tg_do_gravity_tick(Tetris_game *obj) {
+fn void do_gravity_tick(Tetris_game *obj) {
     obj.ticks_till_gravity--;
     if (obj.ticks_till_gravity <= 0) {
-        tg_remove(obj, obj.falling);
+        remove(obj, obj.falling);
         obj.falling.loc.row++;
-        if (tg_fits(obj, obj.falling)) {
+        if (fits(obj, obj.falling)) {
             obj.ticks_till_gravity = GRAVITY_LEVEL[obj.level];
         } else {
             obj.falling.loc.row--;
-            tg_put(obj, obj.falling);
-            tg_new_falling(obj);
+            put(obj, obj.falling);
+            new_falling(obj);
         }
-        tg_put(obj, obj.falling);
+        put(obj, obj.falling);
     }
 }
 
-fn void tg_move(Tetris_game *obj, int direction) {
-    tg_remove(obj, obj.falling);
+fn void move_piece(Tetris_game *obj, int direction) {
+    remove(obj, obj.falling);
     obj.falling.loc.col += direction;
-    if (!tg_fits(obj, obj.falling)) {
+    if (!fits(obj, obj.falling)) {
         obj.falling.loc.col -= direction;
     }
-    tg_put(obj, obj.falling);
+    put(obj, obj.falling);
 }
 
-fn void tg_down(Tetris_game *obj) {
-    tg_remove(obj, obj.falling);
-    while (tg_fits(obj, obj.falling)) {
+fn void down(Tetris_game *obj) {
+    remove(obj, obj.falling);
+    while (fits(obj, obj.falling)) {
         obj.falling.loc.row++;
     }
     obj.falling.loc.row--;
-    tg_put(obj, obj.falling);
-    tg_new_falling(obj);
+    put(obj, obj.falling);
+    new_falling(obj);
 }
 
-fn void tg_rotate(Tetris_game *obj, int direction) {
-    tg_remove(obj, obj.falling);
+fn void rotate(Tetris_game *obj, int direction) {
+    remove(obj, obj.falling);
     while (true) {
         obj.falling.ori = (obj.falling.ori + direction) % NUM_ORIENTATIONS;
-        if (tg_fits(obj, obj.falling)) break;
+        if (fits(obj, obj.falling)) break;
 
         obj.falling.loc.col--;
-        if (tg_fits(obj, obj.falling)) break;
+        if (fits(obj, obj.falling)) break;
 
         obj.falling.loc.col += 2;
-        if (tg_fits(obj, obj.falling)) break;
+        if (fits(obj, obj.falling)) break;
 
         obj.falling.loc.col--;
-        break; // previne loop infinito se nada encaixar
+        break; 
     }
-    tg_put(obj, obj.falling);
+    put(obj, obj.falling);
 }
 
-fn void tg_handle_move(Tetris_game *obj, Tetris_move move) {
+fn void handle_move(Tetris_game *obj, Tetris_move move) {
     switch (move) {
-        case TM_LEFT: tg_move(obj, -1);
-        case TM_RIGHT: tg_move(obj, 1);
-        case TM_DROP: tg_down(obj);
-        case TM_CLOCK: tg_rotate(obj, 1);
-        case TM_COUNTER: tg_rotate(obj, -1);
-        default: break;
+        case TM_LEFT: 
+            move_piece(obj, -1);
+            break;
+        case TM_RIGHT: 
+            move_piece(obj, 1);
+            break;
+        case TM_DROP: 
+            down(obj);
+            break;
+        case TM_CLOCK: 
+            rotate(obj, 1);
+            break;
+        case TM_COUNTER: 
+            rotate(obj, -1);
+            break;
+        default: 
+            break;
     }
 }
 
-fn bool tg_line_full(Tetris_game *obj, int i) {
+fn bool line_full(Tetris_game *obj, int i) {
     for (int j = 0; j < obj.cols; j++) {
-        if (tc_is_empty(tg_get(obj, i, j))) return false;
+        if (is_empty(get(obj, i, j))) return false;
     }
     return true;
 }
 
-fn void tg_shift_lines(Tetris_game *obj, int r) {
+fn void shift_lines(Tetris_game *obj, int r) {
     for (int i = r - 1; i >= 0; i--) {
         for (int j = 0; j < obj.cols; j++) {
-            tg_set(obj, i + 1, j, tg_get(obj, i, j));
-            tg_set(obj, i, j, (char)Tetris_cell.TC_EMPTY);
+            set(obj, i + 1, j, get(obj, i, j));
+            set(obj, i, j, (char)Tetris_cell.TC_EMPTY);
         }
     }
 }
 
-fn int tg_check_lines(Tetris_game *obj) {
+fn int check_lines(Tetris_game *obj) {
     int nlines = 0;
-    tg_remove(obj, obj.falling);
+    remove(obj, obj.falling);
     for (int i = obj.rows - 1; i >= 0; i--) {
-        if (tg_line_full(obj, i)) {
-            tg_shift_lines(obj, i);
+        if (line_full(obj, i)) {
+            shift_lines(obj, i);
             i++;
             nlines++;
         }
     }
-    tg_put(obj, obj.falling);
+    put(obj, obj.falling);
     return nlines;
 }
 
-fn bool tg_game_over(Tetris_game *obj) {
+fn bool game_over(Tetris_game *obj) {
     bool over = false;
-    tg_remove(obj, obj.falling);
+    remove(obj, obj.falling);
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < obj.cols; j++) {
-            if (tc_is_filled(tg_get(obj, i, j))) {
+            if (is_filled(get(obj, i, j))) {
                 over = true;
             }
         }
     }
-    tg_put(obj, obj.falling);
+    put(obj, obj.falling);
     return over;
 }
 
-fn bool tg_tick(Tetris_game *obj, Tetris_move move) {
-    tg_do_gravity_tick(obj);
-    tg_handle_move(obj, move);
-    tg_check_lines(obj);
-    return !tg_game_over(obj);
+fn bool tick(Tetris_game *obj, Tetris_move move) {
+    do_gravity_tick(obj);
+    handle_move(obj, move);
+    check_lines(obj);
+    return !game_over(obj);
 }
 
-fn void tg_init(Tetris_game *obj, int rows, int cols) {
+fn void init(Tetris_game *obj, int rows, int cols) {
     obj.rows = rows;
     obj.cols = cols;
-    obj.board = (char*)libc::malloc(rows * cols);
-    libc::memset(obj.board, (int)Tetris_cell.TC_EMPTY, rows * cols);
+    obj.board = (char*)libc::malloc((usz)(rows * cols));
+    libc::memset(obj.board, (int)Tetris_cell.TC_EMPTY, (usz)(rows * cols));
     obj.points = 0;
     obj.level = 0;
     obj.ticks_till_gravity = GRAVITY_LEVEL[obj.level];
     obj.lines_remaining = LINES_PER_LEVEL;
     libc::srand((uint)libc::time(null));
-    tg_new_falling(obj);
-    tg_new_falling(obj);
+
+    obj.next.loc.col = obj.cols / 2 - 2;
+    new_falling(obj);
+    new_falling(obj);
+
     obj.stored.typ = -1;
     obj.stored.ori = 0;
     obj.stored.loc.row = 0;
+
+    put(obj, obj.falling);
 }
