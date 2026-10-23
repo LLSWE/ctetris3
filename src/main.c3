@@ -31,8 +31,8 @@ const int COLS_PER_CELL = 2;
 const uint A_REVERSE_FLAG = 1 << 18;
 
 fn void add_block(void *w, int x) {
-    waddch(w, ' ' | A_REVERSE_FLAG | color_pair((short)x)); 
-    waddch(w, ' ' | A_REVERSE_FLAG | color_pair((short)x));
+    waddch(w, ' ' | A_REVERSE_FLAG |(uint) color_pair((short)x)); 
+    waddch(w, ' ' | A_REVERSE_FLAG |(uint) color_pair((short)x));
 }
 
 fn void add_empty(void *w) {
